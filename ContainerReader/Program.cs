@@ -11,12 +11,19 @@ namespace ContainerReader
     {
         static void Main(string[] args)
         {
-            if (args.Length != 1)
+
+            if (args.Length != 2)
             {
-                Console.WriteLine("ContainerReader\nA program that prints infomation about Windows Containers.index files, used to store metadata (such as the package family name, guid, and filename) about configuration/save game files for UWP apps and games.\nContainer \"filenames\" are actually directories, as they can have more than one file inside of them.\nUsage: ContainerReader containers.index\nNOTE: Doesn't, at the current time, handle all forms of containers.index. Will add support, but most are supported.");
+                Console.WriteLine("ContainerReader\nA program that prints infomation about Windows Containers.index files, used to store metadata (such as the package family name, guid, and filename) about configuration/save game files for UWP apps and games.\nContainer \"filenames\" are actually directories, as they can have more than one file inside of them.\nUsage: ContainerReader containers.index output/directory\nNOTE: Doesn't, at the current time, handle all forms of containers.index. Will add support, but most are supported.");
                 return;
             }
 
+            if (args[0].Equals("header"))
+            {
+                HeaderFileReader.ReadFile(args[1]);
+                return;
+            }
+            
             try
             {
                 // Open a filestream with the user selected file
@@ -95,10 +102,15 @@ namespace ContainerReader
                     {
                         if (type == 0xe) // (1 file = a block lenght 160)
                         {
-                            string subContainerName = Path.Combine(guid.Replace("-", string.Empty).ToUpper(), "container." + containerNum);
+
+                            string subContainerDir = Path.Combine(Path.GetDirectoryName(args[0]), guid.Replace("-", string.Empty).ToUpper());
+                            string subContainerName = Path.Combine(subContainerDir, "container." + containerNum);
+
+                            Console.WriteLine("Reading: " + subContainerDir);
+                            Console.WriteLine("Reading: " + subContainerName);
 
                             // Open a filestream with the user selected file
-                            FileStream subFile = new FileStream(Path.Combine(Path.GetDirectoryName(args[0]), subContainerName), FileMode.Open);
+                            FileStream subFile = new FileStream(subContainerName, FileMode.Open);
 
                             // Create a binary reader that will be used to read the file
                             BinaryReader subReader = new BinaryReader(subFile);
@@ -143,6 +155,15 @@ namespace ContainerReader
                                 // The second guid is the same
                                 string subSecondGuid = BitConverter.ToString(subGuid6).Replace("-", string.Empty) + "-" + BitConverter.ToString(subGuid7).Replace("-", string.Empty) + "-" + BitConverter.ToString(subGuid8).Replace("-", string.Empty) + "-" + BitConverter.ToString(subGuid9).Replace("-", string.Empty) + "-" + BitConverter.ToString(subGuid10).Replace("-", string.Empty);
 
+                                string subFilepath = Path.Combine(subContainerDir, subGuid.Replace("-", string.Empty).ToUpper());
+                                string outDir = args[1];
+                                if(subfileName.TrimEnd('\0').Contains("Week")) {
+                                    outDir = Path.Combine(outDir, "BackUps");
+                                }
+                                Directory.CreateDirectory(outDir);
+                                string trueFilePath = Path.Combine(outDir, subfileName.TrimEnd('\0'));
+                                Program.WriteTrueFile(trueFilePath, subFilepath);
+
                                 Console.WriteLine("\t" + subfileName + " | " + subGuid);
                             }
 
@@ -150,9 +171,10 @@ namespace ContainerReader
                             subFile.Dispose();
                         }
                     }
-                    catch
+                    catch (Exception e)
                     {
                         Console.WriteLine("This sub type is not supported yet.");
+                        Console.Write(e);
                     }
                 }
             }
@@ -168,6 +190,19 @@ namespace ContainerReader
             {
                 Console.WriteLine("This type is not supported yet.");
             }
+        }
+
+        public static void WriteTrueFile(String trueFilename, String filename) 
+        {
+            FileStream fin = new FileStream(filename, FileMode.Open);
+            BinaryReader reader = new BinaryReader(fin);
+
+            reader.ReadBytes(3); //No idea what these are, content length?
+
+            byte[] bytes = BinaryReaderHelper.BufferedReadAll(reader);
+
+            string value = Encoding.UTF8.GetString(bytes);
+            SESaveReadWriter.WriteFile(trueFilename, value, !trueFilename.EndsWith("ZSVHead"));
         }
     }
 }

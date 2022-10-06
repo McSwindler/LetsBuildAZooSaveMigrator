@@ -44,6 +44,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BinaryReaderHelper.cs" />
+    <Compile Include="SESaveReadWriter.cs" />
+    <Compile Include="HeaderFileReader.cs" />
+    <Compile Include="MapFileReader.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

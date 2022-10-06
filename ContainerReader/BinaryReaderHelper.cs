@@ -21,5 +21,24 @@ namespace ContainerReader
             byte[] buff = reader.ReadBytes(count * 2);
             return Encoding.Unicode.GetString(buff);
         }
+
+        public static byte[] BufferedReadAll(BinaryReader reader)
+        {
+            const int bufferSize = 4096;
+            using (var ms = new MemoryStream())
+            {
+                byte[] buffer = new byte[bufferSize];
+                int count;
+                while ((count = reader.Read(buffer, 0, buffer.Length)) != 0)
+                {
+                    for(int i = 0; i < bufferSize; i++) {
+                        if(buffer[i] > 1) {
+                            ms.WriteByte(buffer[i]);
+                        }
+                    }
+                }
+                return ms.ToArray();
+            }
+        }
     }
 }
